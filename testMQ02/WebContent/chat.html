@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Chat Example - ActiveMQ Web Demos</title>
+<link rel="stylesheet" href="chat.css" type="text/css">
+<script src="https://code.jquery.com/jquery-2.2.4.js"></script>
+<script src="js/stomp.js"></script>
+</head>
+<body>
+   <div id="chatroom">
+      <div id="chatting"></div>
+      <div id="members"></div>
+
+      <div id="input">
+         <div id="join" class="hidden">
+            USERNAME :&nbsp; <input id="username" type="text" />
+            <button id="joinB" onClick="joinUser()">Join</button>
+         </div>
+         <div id="joined" class="hidden">
+            CHAT :&nbsp;<input id="command" type="text"
+               onkeypress="return chatSend(event)" />
+            <button id="sendB" onclick="chatSendB()">Send</button>
+            <button id="leaveB" onclick="disconnect()">Leave</button>
+         </div>
+      </div>
+   </div>
+
+</body>
+<script>
+   $(document).ready(function() {
+      var username = '';
+      var command = '';
+      if ($('#join').hasClass('hidden') && $('#joined').hasClass('hidden')) {
+         $('#join').attr('class', '');
+      }
+   });
+   
+   var url = "ws://localhost:61614/stomp"
+   var un, pw = "guest";
+   var client, src, user, key=0,member;
+   
+   var connect = function() {
+      client = Stomp.client(url);
+      client.connect(un, pw, onconnect, onerror);
+      return false;
+   };
+
+   function disconnect() {
+     console.log(url + "에 연결끊김.");
+      $('#join').attr('class', '');
+      $('#joined').attr('class', 'hidden');
+      client.disconnect();
+      $('#chatting').attr('class');
+      
+   }
+
+   /* send버튼 누르거나 엔터 누를 때 실행되는 이벤트 */
+   function chatSend(e) {
+      if (e.keyCode == 13) {
+         var chatVal = username+":"+$('#command').val();
+         client.send(src, null, chatVal);
+         $('#command').val('');
+         return false;
+      } else {
+         return true;
+      }
+   }
+   function chatSendB() {
+      var chatVal = username+":"+$('#command').val();
+      client.send(src, null, chatVal);
+      $('#command').val('');
+      return false;
+   }
+
+   /*Join Button*/
+   function joinUser() {
+      username = $('#username').val();
+      $('#username').val('');
+      $('#join').attr('class', 'hidden');
+      $('#joined').attr('class', '');
+      //username send 
+      //$('#members').append(username+'<br>');
+     //topic에 저장
+      user = "/topic/users";
+      src = "/topic/chat02"
+      connect();
+      
+   }
+   //접속자 추가
+   function addUser(){
+      client.send(user, null, username);
+      console.log(username,"님이 입장했습니다.");
+      key=1;
+      return false;
+   }
+   /*
+    function getUser(){
+       client.subscribe(user, function(message){
+           $('#members').append(message.body + '<br>');
+            console.log(username); 
+        });
+    }*/
+   var onconnect = function() {
+      console.log(url + "에 연결되었습니다.");  
+      if(key==0){
+      addUser();
+      }
+      //접속자 출력
+     client.subscribe(user, function(message){
+    	member = message.body+"<br>";
+        $('#members').append(member);
+        $('#chatting').append(message.body + '님이 입장했습니다.'+'<br>');
+        console.log(username);
+     });
+      //topic에서 빼옴
+      client.subscribe(src, function(message) {
+         $('#chatting').append(message.body + '<br>');
+         console.log("수신된 메시지:" + message.body);
+      });
+      
+      return false;
+   };
+
+   var onerror = function(error) {
+      console.log(error);
+   };
+</script>
+</html>
